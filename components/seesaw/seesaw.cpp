@@ -122,12 +122,21 @@ int16_t Seesaw::get_touch_value(uint8_t channel)
   return -1;
 }
 
-float Seesaw::get_temperature() {
+float Seesaw::get_temperature()
+{
+  uint8_t req[2] = {SEESAW_STATUS, SEESAW_STATUS_TEMP};
   uint8_t buf[4];
-  if (this->readbuf(SEESAW_STATUS, SEESAW_STATUS_TEMP, buf, 4) != i2c::ERROR_OK)
-    return 0;
-  int32_t value = (buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + buf[3];
-  return float(value) / 0x10000;
+  for (int retry = 0; retry < 5; retry++)
+  {
+    if (this->write(req, 2) != i2c::ERROR_OK)
+      continue;
+    delay(1 + retry);
+    if (this->read(buf, 4) != i2c::ERROR_OK)
+      continue;
+    int32_t value = (buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + buf[3];
+    return float(value) / 0x10000;
+  }
+  return NAN;
 }
 
 void Seesaw::set_pinmode(uint8_t pin, uint8_t mode) {
